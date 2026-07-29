@@ -1,94 +1,69 @@
 import { useState } from "react";
+import Gallery from "./components/Gallery";
+import Upload from "./components/Upload";
+import Login from "./components/Login";
 
 function App() {
-  const [form, setForm] = useState({
-    name: "",
-    price: "",
-    description: "",
-    file: null,
-  });
+  const [page, setPage] = useState("gallery"); // 🔥 always gallery first
+  const [refresh, setRefresh] = useState(false);
 
-  const handleChange = (e) => {
-    if (e.target.name === "file") {
-      setForm({ ...form, file: e.target.files[0] });
-    } else {
-      setForm({ ...form, [e.target.name]: e.target.value });
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    formData.append("name", form.name);
-    formData.append("price", form.price);
-    formData.append("description", form.description);
-    formData.append("uploadfile", form.file);
-
-    try {
-      const res = await fetch(
-        "http://localhost/backend/api/products.php",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await res.json();
-      console.log(data);
-
-      if (data.status === "success") {
-        alert("Product Added ✔");
-      } else {
-        alert("Error ❌");
-      }
-    } catch (err) {
-      console.log(err);
-    }
-  };
+const [role, setRole] = useState(localStorage.getItem("role"));
 
   return (
-    <div className="p-5 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-center">
-        Add Product
-      </h1>
+    <div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      {/* 🔥 NAVBAR */}
+      <div className="flex gap-4 p-3 bg-gray-200 items-center">
 
-        <input
-          type="text"
-          name="name"
-          placeholder="Product Name"
-          className="border p-2 w-full"
-          onChange={handleChange}
-        />
-
-        <input
-          type="number"
-          name="price"
-          placeholder="Price"
-          className="border p-2 w-full"
-          onChange={handleChange}
-        />
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          className="border p-2 w-full"
-          onChange={handleChange}
-        ></textarea>
-
-        <input
-          type="file"
-          name="file"
-          className="border p-2 w-full"
-          onChange={handleChange}
-        />
-
-        <button className="bg-black text-white p-2 w-full">
-          Upload
+        <button onClick={() => setPage("gallery")}>
+          Gallery
         </button>
-      </form>
+
+        {/* 🔐 ADMIN ONLY */}
+        {role === "admin" && (
+  <button onClick={() => setPage("upload")}>
+    Add Product
+  </button>
+)}
+
+        {/* 🔐 LOGIN / LOGOUT */}
+        {!role ? (
+  <button onClick={() => setPage("login")}>
+    Login
+  </button>
+) : (
+  <button
+    onClick={() => {
+      localStorage.removeItem("role");
+      setRole(null);
+      setPage("gallery");
+    }}
+  >
+    Logout
+  </button>
+)}
+
+      </div>
+
+      {/* 🔥 PAGES */}
+
+      {page === "login" && <Login setPage={setPage} setRole={setRole} />}
+
+      {page === "gallery" && (
+        <Gallery
+          refresh={refresh}
+          onDelete={() => setRefresh(!refresh)}
+          role={role}  
+        />
+      )}
+
+      {page === "upload" && role === "admin" && (
+        <Upload
+          onUpload={() => setRefresh(!refresh)}
+          goToGallery={() => setPage("gallery")}
+        />
+      )}
+
     </div>
   );
 }
