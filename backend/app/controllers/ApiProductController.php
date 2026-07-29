@@ -54,6 +54,52 @@ class ApiProductController
         exit;
     }
 
+    function deleteProduct()
+    {
+        $id = $_POST['id'] ?? 0;
+
+        if (!$id) {
+            echo json_encode(["status" => "error"]);
+            exit;
+        }
+
+        $this->product->deleteProduct($id);
+
+        echo json_encode(["status" => "deleted"]);
+        exit;
+    }
+
+    function updateProduct()
+    {
+        $id = $_POST['id'] ?? 0;
+        $name = $_POST['name'] ?? '';
+        $price = (int)($_POST['price'] ?? 0);
+        $description = $_POST['description'] ?? '';
+
+        if (!$id || empty($name) || $price <= 0) {
+            echo json_encode(["status" => "error"]);
+            exit;
+        }
+
+        // image optional
+        $imagepath = null;
+
+        if (!empty($_FILES['uploadfile']['name'])) {
+            $file_name = time() . "_" . basename($_FILES['uploadfile']['name']);
+            $temp_name = $_FILES['uploadfile']['tmp_name'];
+
+            $uploadPath = __DIR__ . "/../../public/uploads/" . $file_name;
+            move_uploaded_file($temp_name, $uploadPath);
+
+            $imagepath = "uploads/" . $file_name;
+        }
+
+        $this->product->updateProduct($id, $name, $price, $description, $imagepath);
+
+        echo json_encode(["status" => "updated"]);
+        exit;
+    }
+
 
 }
 

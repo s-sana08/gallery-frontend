@@ -24,6 +24,27 @@ class Product{
         $stmt->execute(['active']);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    
+    function deleteProduct($id)
+    {
+        $stmt = $this->db->prepare("UPDATE products SET status=?  WHERE id=? AND status=? ");
+        return $stmt->execute(['inactive',$id,'active']);
+    }
+
+    function updateProduct($id, $name, $price, $description, $imagepath = null)
+    {
+        if ($imagepath) {
+            $stmt = $this->db->prepare(
+                "UPDATE products SET name=?, price=?, description=?, image=? WHERE id=?"
+            );
+            return $stmt->execute([$name, $price, $description, $imagepath, $id]);
+        } else {
+            $stmt = $this->db->prepare(
+                "UPDATE products SET name=?, price=?, description=? WHERE id=?"
+            );
+            return $stmt->execute([$name, $price, $description, $id]);
+        }
+    }
 
 
 }
