@@ -14,17 +14,25 @@ const handleLogin = async () => {
     {
       method: "POST",
       body: formData,
+      credentials: "include",
     }
   );
 
   const data = await res.json();
 
   if (data.status === "success") {
-    localStorage.setItem("role", data.role); // frontend control
-    alert("Login Success ✔");
-    setRole(data.role);
+  localStorage.setItem("role", data.role);
+
+  setRole(data.role);
+ if (data.role === "admin") {
+    setRole("admin");   // already correct
+  }
+  setTimeout(() => {
     setPage("gallery");
-  } else {
+  }, 200);
+
+  alert("Login Success ✔");
+}else {
     alert("Invalid login ❌");
   }
 };

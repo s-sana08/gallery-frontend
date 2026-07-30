@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 
 
-function Gallery({ refresh = false, onDelete, role }) {
+function Gallery({ refresh = false, onDelete, isAdmin }) {
   const [products, setProducts] = useState([]);
   const [editProduct, setEditProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -10,17 +10,42 @@ function Gallery({ refresh = false, onDelete, role }) {
   const [liked, setLiked] = useState({});
   const [minPrice, setMinPrice] = useState("");
 const [maxPrice, setMaxPrice] = useState("");
+const [loading, setLoading] = useState(true);
+const [csrfToken, setCsrfToken] = useState("");
 
 
-  useEffect(() => {
-    fetch("http://localhost/backend/api/products.php")
-      .then((res) => res.json())
-      .then((data) => {
-        setProducts(data);
-      })
-      .catch((err) => console.log(err));
-  }, [refresh]);
 
+useEffect(() => {
+  setLoading(true);
+
+  fetch("http://localhost/backend/api/csrf.php", {
+    credentials: "include",
+  })
+    .then((res) => res.json())
+    .then((csrfData) => {
+      setCsrfToken(csrfData.csrf_token);
+
+      // ⭐ AFTER CSRF → fetch products
+      return fetch("http://localhost/backend/api/products.php", {
+        credentials: "include",
+      });
+    })
+    .then((res) => res.json())
+    .then((productData) => {
+      setProducts(productData);
+      setLoading(false);
+    })
+    .catch(() => setLoading(false));
+
+}, [refresh]);
+
+if (loading) {
+  return <p className="text-center mt-10">Loading...</p>;
+}
+
+if (!loading && products.length === 0) {
+  return <p className="text-center">No products found</p>;
+}
   const toggleLike = (id) => {
   setLiked((prev) => ({
     ...prev,
@@ -37,27 +62,46 @@ const filteredProducts = products.filter((p) => {
   );
 });
   const handleDelete = async (id) => {
+
+        if (!csrfToken) {
+      alert("Security token not ready ❌");
+      return;
+    }
+
   const formData = new FormData();
   formData.append("id", id);
   formData.append("delete", true);
+  formData.append("csrf_token", csrfToken);
 
   const res = await fetch(
     "http://localhost/backend/api/products.php",
     {
       method: "POST",
       body: formData,   
+      credentials: "include",
     }
   );
 
   const data = await res.json();
 
-  if (data.status === "deleted") {
-    alert("Deleted ✔");
-    onDelete();
-  }
+ if (data.status === "csrf_invalid") {
+  alert("Security error ❌");
+  return;
+}
+
+if (data.status === "deleted") {
+  alert("Deleted ✔");
+  onDelete();
+}
 };
 
 const handleUpdate = async (product) => {
+
+  if (!csrfToken) {
+    alert("Security token not ready ❌");
+    return;
+  }
+
   const formData = new FormData();
   formData.append("id", product.id);
   formData.append("name", product.name);
@@ -65,25 +109,40 @@ const handleUpdate = async (product) => {
   formData.append("description", product.description);
   formData.append("update", true);
 
+  // ⭐ only once (tumne 2 baar add kiya hai — fix below)
+  formData.append("csrf_token", csrfToken);
+
   if (product.file) {
     formData.append("uploadfile", product.file);
-    }
+  }
+
   const res = await fetch(
     "http://localhost/backend/api/products.php",
     {
       method: "POST",
       body: formData,
+      credentials: "include",
     }
   );
 
   const data = await res.json();
 
+  if (data.status === "csrf_invalid") {
+    alert("Security error ❌");
+    return;
+  }
+
   if (data.status === "updated") {
     alert("Updated ✔");
-    setEditProduct(null);
-    onDelete(); // refresh
+
+    setEditProduct(null);  // ⭐ modal close
+    onDelete();            // ⭐ gallery refresh (same as delete)
+  } else {
+    alert("Update failed ❌");
+    console.log("UPDATE RESPONSE:", data);
   }
 };
+ 
 
   return (
    <div className="min-h-screen bg-gray-100 p-6">
@@ -143,7 +202,7 @@ const handleUpdate = async (product) => {
                 ♥
                 </button>
 
-            {role === "admin" && (
+            {isAdmin && (
   <>
     <button
       onClick={() => setEditProduct(product)}
@@ -169,7 +228,7 @@ const handleUpdate = async (product) => {
 
    
 
-    {editProduct && role === "admin" && (
+    {editProduct && isAdmin && (
   <div className="fixed top-0 left-0 w-full h-full bg-black/50 flex justify-center items-center">
 
     <div className="bg-white p-5 rounded w-96">
@@ -215,11 +274,12 @@ const handleUpdate = async (product) => {
         />
 
       <button
-        onClick={() => handleUpdate(editProduct)}
-        className="bg-black text-white px-3 py-1"
-      >
-        Save
-      </button>
+  type="button"   // ⭐ VERY IMPORTANT
+  onClick={() => handleUpdate(editProduct)}
+  className="bg-black text-white px-3 py-1"
+>
+  Save
+</button>
 
       <button
         onClick={() => setEditProduct(null)}

@@ -1,12 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function Upload({ onUpload, goToGallery }) {
+
+
+  const [csrfToken, setCsrfToken] = useState("");
+  
   const [form, setForm] = useState({
     name: "",
     price: "",
     description: "",
     file: null,
   });
+
+  useEffect(() => {
+  fetch("http://localhost/backend/api/csrf.php", {
+    credentials: "include",
+  })
+    .then(res => res.json())
+    .then(data => setCsrfToken(data.csrf_token));
+}, []);
+
 
   const handleChange = (e) => {
     if (e.target.name === "file") {
@@ -24,6 +37,7 @@ function Upload({ onUpload, goToGallery }) {
     formData.append("price", form.price);
     formData.append("description", form.description);
     formData.append("uploadfile", form.file);
+    formData.append("csrf_token", csrfToken);
 
     try {
       const res = await fetch(
@@ -31,18 +45,24 @@ function Upload({ onUpload, goToGallery }) {
         {
           method: "POST",
           body: formData,
+          credentials: "include",
         }
       );
 
       const data = await res.json();
 
-      if (data.status === "success") {
-        alert("Product Added ✔");
-         onUpload();
-          goToGallery(); 
-      } else {
-        alert("Error ❌");
-      }
+if (data.status === "csrf_invalid") {
+  alert("Security error ❌");
+  return;
+}
+
+if (data.status === "success") {
+  alert("Product Added ✔");
+   onUpload();        // ⭐ refresh gallery
+  goToGallery();     // ⭐ redirect to gallery
+} else {
+  alert("Error ❌");
+}
     } catch (err) {
       console.log(err);
     }
