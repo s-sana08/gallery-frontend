@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 
+import Search from "./Search";
 
 
-function Gallery({ refresh = false, onDelete, isAdmin }) {
+function Gallery({ refresh, onDelete, isAdmin, search, isSearchPage, setSearch }) {
   const [products, setProducts] = useState([]);
   const [editProduct, setEditProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [search, setSearch] = useState("");
+
   const [liked, setLiked] = useState({});
   const [minPrice, setMinPrice] = useState("");
 const [maxPrice, setMaxPrice] = useState("");
@@ -25,7 +26,7 @@ useEffect(() => {
     .then((csrfData) => {
       setCsrfToken(csrfData.csrf_token);
 
-      // ⭐ AFTER CSRF → fetch products
+   
       return fetch("http://localhost/backend/api/products.php", {
         credentials: "include",
       });
@@ -61,6 +62,11 @@ const filteredProducts = products.filter((p) => {
       .includes(term)
   );
 });
+
+
+
+
+
   const handleDelete = async (id) => {
 
         if (!csrfToken) {
@@ -109,7 +115,7 @@ const handleUpdate = async (product) => {
   formData.append("description", product.description);
   formData.append("update", true);
 
-  // ⭐ only once (tumne 2 baar add kiya hai — fix below)
+  
   formData.append("csrf_token", csrfToken);
 
   if (product.file) {
@@ -135,8 +141,8 @@ const handleUpdate = async (product) => {
   if (data.status === "updated") {
     alert("Updated ✔");
 
-    setEditProduct(null);  // ⭐ modal close
-    onDelete();            // ⭐ gallery refresh (same as delete)
+    setEditProduct(null);  
+    onDelete();            
   } else {
     alert("Update failed ❌");
     console.log("UPDATE RESPONSE:", data);
@@ -145,20 +151,13 @@ const handleUpdate = async (product) => {
  
 
   return (
-   <div className="min-h-screen bg-gray-100 p-6">
+   <div className="min-h-screen ">
 
-  <h1 className="text-3xl font-bold text-center mb-8">
-    My Gallery
-  </h1>
 
-  <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-5 gap-5 space-y-5">
-<input
-  type="text"
-  placeholder="Search (name, description, price...)"
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-  className="border p-2 mb-4 w-full rounded"
-/>
+
+  <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-5 gap-5 space-y-5 ">
+  
+
 
 
     {filteredProducts.map((product) => (
@@ -168,7 +167,6 @@ const handleUpdate = async (product) => {
         className="break-inside-avoid bg-white rounded-2xl shadow hover:shadow-xl transition duration-300"
       >
 
-        {/* IMAGE */}
         <div className="overflow-hidden rounded-t-2xl">
           <img
                 onClick={() =>
@@ -179,7 +177,7 @@ const handleUpdate = async (product) => {
                 />
         </div>
 
-        {/* CONTENT */}
+
         <div className="p-4">
           <h3 className="font-semibold text-lg">
             {product.name}
@@ -274,7 +272,7 @@ const handleUpdate = async (product) => {
         />
 
       <button
-  type="button"   // ⭐ VERY IMPORTANT
+  type="button"   
   onClick={() => handleUpdate(editProduct)}
   className="bg-black text-white px-3 py-1"
 >

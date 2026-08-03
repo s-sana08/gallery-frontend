@@ -58,8 +58,8 @@ if (data.status === "csrf_invalid") {
 
 if (data.status === "success") {
   alert("Product Added ✔");
-   onUpload();        // ⭐ refresh gallery
-  goToGallery();     // ⭐ redirect to gallery
+   onUpload();     
+  goToGallery();   
 } else {
   alert("Error ❌");
 }

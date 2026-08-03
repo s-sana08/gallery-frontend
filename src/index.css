@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+
+.i-gallery{
+    background-color:#e5e5e0;
+    border: 1px solid #e5e5e0;
+    border-radius: 12px;
+}
+
+.i-gallery:focus{
+
+  outline: none;        
+  border: 2px solid rgb(110, 164, 214); 
+}

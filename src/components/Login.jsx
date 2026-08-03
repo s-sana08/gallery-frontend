@@ -25,7 +25,7 @@ const handleLogin = async () => {
 
   setRole(data.role);
  if (data.role === "admin") {
-    setRole("admin");   // already correct
+    setRole("admin");   
   }
   setTimeout(() => {
     setPage("gallery");
