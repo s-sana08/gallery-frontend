@@ -1,21 +1,44 @@
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import Search from "./Search";
 import { motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, PenLine, Trash2, ArrowDownToLine } from "lucide-react";
 
 function Gallery({ refresh, onDelete, isAdmin, search, isSearchPage, setSearch }) {
   const [products, setProducts] = useState([]);
   const [editProduct, setEditProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-
+  const [activeMenu, setActiveMenu] = useState(null);
   const [liked, setLiked] = useState({});
   const [loading, setLoading] = useState(true);
   const [csrfToken, setCsrfToken] = useState("");
+  const [downloaded, setDownloaded] = useState({});
 
+  const [menuOpen, setMenuOpen] = useState(null);
+  const [visibleCards, setVisibleCards] = useState({});
+  const cardRefs = useRef([]);
   // ✅ NEW (edit preview)
   const [editPreview, setEditPreview] = useState(null);
   const [editFileName, setEditFileName] = useState("");
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = entry.target.dataset.index;
+            setVisibleCards((prev) => ({
+              ...prev,
+              [index]: true,
+            }));
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
 
+    cardRefs.current.forEach((el) => el && observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [products]);
   useEffect(() => {
     setLoading(true);
 
@@ -56,6 +79,14 @@ function Gallery({ refresh, onDelete, isAdmin, search, isSearchPage, setSearch }
     );
   });
 
+//download image
+const handleDownload = (image) => {
+  window.open(
+    `http://localhost/backend/api/download.php?file=${image}`,
+    "_blank"
+  );
+};
+  
   const handleDelete = async (id) => {
     if (!csrfToken) {
       alert("Security token not ready ❌");
@@ -150,59 +181,161 @@ function Gallery({ refresh, onDelete, isAdmin, search, isSearchPage, setSearch }
 
       <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-5 gap-5 space-y-5">
 
-        {filteredProducts.map((product) => (
+        {filteredProducts.map((product, index) => (
           <div
             key={product.id}
-            className="break-inside-avoid bg-white rounded-2xl shadow hover:shadow-xl transition duration-300"
+            ref={(el) => (cardRefs.current[index] = el)}
+            data-index={index}
+            className="break-inside-avoid relative bg-[#0f172a48] rounded-2xl group transition duration-300"
+            style={{
+              opacity: visibleCards[index] ? 1 : 0,
+              transform: visibleCards[index]
+                ? "translateY(0px)"
+                : "translateY(40px)",
+              transition: `all 0.6s ease ${index * 0.08}s`,
+            }}
           >
-            <div className="overflow-hidden rounded-t-2xl">
-              <img
-                onClick={() =>
-                  setSelectedImage(`http://localhost/backend/public/${product.image}`)
-                }
-                src={`http://localhost/backend/public/${product.image}`}
-                className="cursor-pointer"
-              />
-            </div>
 
-            <div className="p-4">
-              <h3 className="font-semibold text-lg">{product.name}</h3>
+            {/* Neon border */}
+            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 
+      transition duration-500 blur-md 
+      bg-linear-to-r from-[#8f93a0] via-[#15304d] to-[#676b76]"></div>
 
-              <p className="text-gray-500 text-sm mt-1 line-clamp-2">
-                {product.description}
-              </p>
+            {/* Card Content */}
+            <div className="relative bg-white rounded-2xl overflow-hidden 
+      group-hover:-translate-y-1 transition duration-300 shadow-lg group-hover:shadow-2xl">
 
-              <div className="flex justify-between items-center mt-3">
-                <span className="font-bold text-black">₹{product.price}</span>
-                <button
-                  onClick={() => toggleLike(product.id)}
-                  className={`text-xl transition-all duration-300
-    ${liked[product.id]
-                      ? "text-red-500 scale-125 animate-bounce"
-                      : "text-gray-400"}
-  `}
-                >
-                  ♥
-                </button>
+              {/* Image */}
+              <div className="overflow-hidden">
+                <img
+                  onClick={() =>
+                    setSelectedImage(`http://localhost/backend/public/${product.image}`)
+                  }
+                  src={`http://localhost/backend/public/${product.image}`}
+                  className="cursor-pointer w-full transition duration-500 group-hover:scale-110"
+                />
+              </div>
 
-                {isAdmin && (
-                  <>
-                    <button
-                      onClick={() => setEditProduct(product)}
-                      className="relative text-blue-500 text-sm group"
-                    >
-                      Edit
-                      <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-blue-500 transition-all duration-300 group-hover:w-full"></span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="text-red-500 text-sm transition-all duration-300
-             hover:text-red-700 hover:animate-[wiggle_0.3s_ease-in-out]"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
+              {/* Content */}
+              <div className="p-4">
+                <h3 className="font-semibold text-lg text-gray-600 group-hover:text-[#15304d] transition">
+                  {product.name}
+                </h3>
+
+                <p className="text-gray-500 text-sm mt-1 line-clamp-2">
+                  {product.description}
+                </p>
+
+                <div className="flex justify-between items-center mt-3">
+                  <span className="font-bold text-gray-600 group-hover:text-[#15304d] transition">₹{product.price}</span>
+
+                  {/* ❤️ Like */}
+                  <button
+                    onClick={() => toggleLike(product.id)}
+                    className={`text-xl transition-all duration-300
+              ${liked[product.id]
+                        ? "text-red-500 scale-125 animate-[bounce_0.6s_ease]"
+                        : "text-gray-400"
+                      }`}
+                  >
+                    ♥
+                  </button>
+<button
+  onClick={() => handleDownload(product.image, product.id)}
+  className={`text-xl transition-all duration-300
+    hover:text-[#008cff] hover:scale-110
+    ${downloaded[product.id]
+      ? "text-blue-500 scale-125 animate-[bounce_0.6s_ease]"
+      : "text-gray-400"
+    }`}
+>
+<ArrowDownToLine size={20} />
+</button>
+   
+                  {/* ⚡ Radial Menu */}
+                  {isAdmin && (
+                    <div className="relative">
+
+                      {/* MAIN BUTTON */}
+                      <button
+                        onClick={() =>
+                          setMenuOpen(menuOpen === product.id ? null : product.id)
+                        }
+                        className="w-8 h-8 rounded-lg bg-gray-100
+             text-black shadow-md flex items-center justify-center relative"
+                      >
+
+                        {/* DOTS */}
+                        <span
+                          className={`absolute cursor-pointer
+    transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+    hover:scale-110
+      ${menuOpen === product.id
+                              ? "opacity-0 rotate-90 scale-75"
+                              : "opacity-100 rotate-0 scale-100"
+                            }`}
+                        >
+                          •••
+                        </span>
+
+                        {/* CLOSE (X) */}
+                        <span
+                          className={`absolute cursor-pointer
+    transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+    hover:scale-110
+      ${menuOpen === product.id
+                              ? "opacity-100 rotate-0 scale-100"
+                              : "opacity-0 -rotate-90 scale-75"
+                            }`}
+                        >
+                          ✕
+                        </span>
+
+                      </button>
+
+                      {/* FAN MENU */}
+                      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 group">
+
+                        {/* EDIT */}
+                        <button
+                          onClick={() => {
+                            setEditProduct(product);
+                            setMenuOpen(null);
+                          }}
+                          className={`w-8 h-8 rounded-lg text-sm bg-white text-[#008cff] shadow-md border border-[#008cff]
+    flex items-center justify-center cursor-pointer
+    transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+    hover:scale-110
+    ${menuOpen === product.id
+                              ? "opacity-100 translate-y-0"
+                              : "opacity-0 translate-y-4 pointer-events-none"
+                            }`}
+                        >
+                          <PenLine size={14} />
+                        </button>
+                        {/* DELETE */}
+                        <button
+                          onClick={() => {
+                            handleDelete(product.id);
+                            setMenuOpen(null);
+                          }}
+                          className={`w-8 h-8 rounded-lg text-sm bg-white text-[red] shadow-md border border-[red]
+    flex items-center justify-center cursor-pointer
+    transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+    hover:scale-110
+      ${menuOpen === product.id
+                              ? "opacity-100 translate-y-0"
+                              : "opacity-0 translate-y-4 pointer-events-none"
+                            }`}
+                        >
+                          <Trash2 size={14} />
+
+                        </button>
+
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
